@@ -1,0 +1,34 @@
+name: Grade Monitor
+
+on:
+  schedule:
+    # 每2小时检查一次（可调整）
+    - cron: '0 */2 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  monitor-grades:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install --no-cache-dir requests pyquery pycryptodome certifi
+    
+    - name: Run grade monitor
+      env:
+        STUDENT_USERNAME: ${{ secrets.STUDENT_USERNAME }}
+        STUDENT_PASSWORD: ${{ secrets.STUDENT_PASSWORD }}
+        WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GIST_ID: ${{ secrets.GIST_ID }}
+      run: |
+        python grade_monitor.py
