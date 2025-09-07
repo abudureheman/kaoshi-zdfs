@@ -1,16 +1,75 @@
-name: Grade Monitor
+name: Grade Monitor (Vacation Mode)
 
 on:
   schedule:
-    # 每2小时检查一次（可根据需要调整）
+    # 每2小时检查一次
     - cron: '0 */2 * * *'
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
-  monitor-grades:
+  check-vacation:
     runs-on: ubuntu-latest
+    outputs:
+      is_vacation: ${{ steps.vacation_check.outputs.is_vacation }}
+      period_info: ${{ steps.vacation_check.outputs.period_info }}
     
     steps:
+    - name: Check if current time is in vacation period
+      id: vacation_check
+      run: |
+        current_month=$(date +%m)
+        current_day=$(date +%d)
+        
+        echo "当前日期: $(date +%Y-%m-%d)"
+        
+        is_vacation=false
+        period_info=""
+        
+        # 寒假期间：1月16日 - 2月28日
+        if [[ ($current_month -eq 01 && $current_day -ge 16) || \
+              ($current_month -eq 02 && $current_day -le 28) ]]; then
+          is_vacation=true
+          period_info="寒假"
+        fi
+        
+        # 暑假期间：7月16日 - 8月31日
+        if [[ ($current_month -eq 07 && $current_day -ge 16) || \
+              ($current_month -eq 08 && $current_day -le 31) ]]; then
+          is_vacation=true
+          period_info="暑假"
+        fi
+        
+        # 设置其他时期的描述
+        if [[ "$is_vacation" == "false" ]]; then
+          if [[ ($current_month -ge 03 && $current_month -le 07 && $current_day -le 15) ]]; then
+            period_info="春季学期"
+          elif [[ ($current_month -ge 09) || ($current_month -eq 01 && $current_day -le 15) ]]; then
+            period_info="秋季学期"
+          fi
+        fi
+        
+        echo "is_vacation=$is_vacation" >> $GITHUB_OUTPUT
+        echo "period_info=$period_info" >> $GITHUB_OUTPUT
+        
+        if [[ "$is_vacation" == "true" ]]; then
+          echo "✅ 当前处于 $period_info 期间，执行成绩监控（可能有补考/重修成绩）"
+        else
+          echo "❌ 当前处于 $period_info 期间，跳过成绩监控"
+        fi
+
+  monitor-grades:
+    needs: check-vacation
+    runs-on: ubuntu-latest
+    # 只有在假期才运行监控
+    if: needs.check-vacation.outputs.is_vacation == 'true'
+    
+    steps:
+    - name: Show vacation monitoring info
+      run: |
+        echo "🏖️ ${{ needs.check-vacation.outputs.period_info }}成绩监控启动"
+        echo "📋 监控补考、重修、延迟发布的成绩"
+        echo "⏰ 检查时间：$(date)"
+    
     - name: Checkout repository
       uses: actions/checkout@v4
     
@@ -28,7 +87,21 @@ jobs:
         STUDENT_USERNAME: ${{ secrets.STUDENT_USERNAME }}
         STUDENT_PASSWORD: ${{ secrets.STUDENT_PASSWORD }}
         WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
-        AGITHUB_TOKEN: ${{ secrets.AGITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GIST_ID: ${{ secrets.GIST_ID }}
       run: |
         python grade_monitor.py
+
+  semester-notice:
+    needs: check-vacation
+    runs-on: ubuntu-latest
+    # 只在学期期间运行这个通知
+    if: needs.check-vacation.outputs.is_vacation == 'false'
+    
+    steps:
+    - name: Semester period notice
+      run: |
+        echo "📚 当前处于：${{ needs.check-vacation.outputs.period_info }}"
+        echo "💤 监控系统已暂停（学期期间无需监控）"
+        echo "⏰ 检查时间：$(date)"
+        echo "🔄 假期开始后将自动启动监控"
