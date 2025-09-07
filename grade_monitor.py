@@ -237,6 +237,37 @@ def jwxt_login(username: str, plain_password: str):
     except Exception as e:
         return {"code": 500, "msg": f"登录过程出错：{str(e)}"}
 
+def get_semester_params():
+    """
+    智能获取学年学期参数，处理跨年情况
+    返回适合当前时间的学年学期参数
+    """
+    from datetime import datetime
+    
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+    
+    # 学年和学期的判断逻辑
+    if current_month >= 9:  # 9月及以后，秋季学期
+        xnm = str(current_year)  # 学年以秋季开始年份为准
+        xqm = "12"  # 秋季学期代码
+        semester_name = f"{current_year}-{current_year+1}"
+    elif current_month <= 2:  # 1-2月，仍属于上一学年的秋季学期
+        xnm = str(current_year - 1)
+        xqm = "12"
+        semester_name = f"{current_year-1}-{current_year}"
+    else:  # 3-8月，春季学期
+        xnm = str(current_year - 1)  # 春季学期属于上一年开始的学年
+        xqm = "03"  # 春季学期代码
+        semester_name = f"{current_year-1}-{current_year}"
+    
+    return {
+        "xnm": semester_name,
+        "xqm": xqm
+    }
+
+
 def get_grades():
     """查询课程成绩"""
     url = "https://jwxt.xjau.edu.cn/jwglxt/cjcx/cjcx_cxXsgrcj.html?doType=query&gnmkdm=N305005"
@@ -251,10 +282,14 @@ def get_grades():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "X-Requested-With": "XMLHttpRequest"
     }
+
+    
+   semester_params = get_semester_params()
+
     
     data = {
-        "xnm": "",  # 空值表示获取所有学年
-        "xqm": "",  # 空值表示获取所有学期
+        "xnm": semester_params["xnm"],  # 空值表示获取所有学年
+        "xqm": semester_params["xqm"],  # 空值表示获取所有学期
         "sfzgcj": "",
         "kcbj": "",
         "_search": "false",
