@@ -28,7 +28,7 @@ jobs:
         STUDENT_USERNAME: ${{ secrets.STUDENT_USERNAME }}
         STUDENT_PASSWORD: ${{ secrets.STUDENT_PASSWORD }}
         WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        AGITHUB_TOKEN: ${{ secrets.AGITHUB_TOKEN }}
         GIST_ID: ${{ secrets.GIST_ID }}
       run: |
         python grade_monitor.py
