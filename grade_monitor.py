@@ -451,7 +451,7 @@ def main():
     username = os.environ.get('STUDENT_USERNAME')
     password = os.environ.get('STUDENT_PASSWORD')
     webhook_url = os.environ.get('WECHAT_WEBHOOK')
-    github_token = os.environ.get('GITHUB_TOKEN')
+    github_token = os.environ.get('AGITHUB_TOKEN')
     gist_id = os.environ.get('GIST_ID')
     
     if not username or not password:
